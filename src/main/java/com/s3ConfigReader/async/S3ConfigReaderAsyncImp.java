@@ -6,6 +6,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import org.apache.log4j.Logger;
 
 import java.io.*;
 
@@ -14,12 +15,14 @@ import java.io.*;
  */
 public class S3ConfigReaderAsyncImp implements S3ConfigReaderInterface{
 
+    final static Logger logger = Logger.getLogger(S3configReaderAsync.class);
+
     public void getConfig(String s3Bucket, String s3ConfigKey, Vertx vertx, Handler<JsonObject> handler) {
+
+        logger.info("Reading Config From Bucket -> " + s3Bucket + " ,Key -> " + s3ConfigKey);
 
         vertx.executeBlocking(future -> {
             try {
-//                Thread.sleep(5000);         // Checking Blocking code.
-
                 DefaultAWSCredentialsProviderChain defaultAWSCredentialsProviderChain = new DefaultAWSCredentialsProviderChain();
 
                 AmazonS3Client s3Client = new AmazonS3Client(defaultAWSCredentialsProviderChain);
@@ -28,10 +31,8 @@ public class S3ConfigReaderAsyncImp implements S3ConfigReaderInterface{
 
                 InputStream objectData = s3Object.getObjectContent();
 
-//                InputStream objectData = new FileInputStream(new File("/home/ankit07/TEST/config_test.json"));
-
                 int i = objectData.available();
-                System.out.println("Value of available :: " + i);
+
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(objectData));
 
                 StringBuilder out = new StringBuilder();
@@ -43,16 +44,16 @@ public class S3ConfigReaderAsyncImp implements S3ConfigReaderInterface{
                 JsonObject jsonObject = new JsonObject(out.toString());
                 bufferedReader.close();
 
-                System.out.println("I AM HERE !!!!!!");
-                handler.handle(jsonObject);
+                future.complete(jsonObject.toString());
 
-                future.complete("S3 Read completed.");
             } catch (Exception e) {
-                e.printStackTrace();
+//                e.printStackTrace();
+                logger.error("Error Reading Config -> Cause : " + e.getMessage());
                 handler.handle(new JsonObject());
             }
         }, res -> {
-            System.out.println("Result -> " + res.result());
+            logger.info("Config Read -> " + new JsonObject(res.result().toString()).toString());
+            handler.handle(new JsonObject(res.result().toString()));
         });
 
         System.out.println("------- Do Other task here ------------ ");
